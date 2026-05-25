@@ -7,7 +7,8 @@ SECTIONS
 
     .text :
     {
-        /* Ensure multiboot header is at the beginning */
+        /* Ensure multiboot headers are at the very beginning */
+        KEEP(*(.multiboot_v1))
         KEEP(*(.multiboot_header))
         *(.text)
     }

@@ -39,7 +39,7 @@ BOOT_OBJ = $(BUILD_DIR)/boot/boot.o
 ALL_OBJS = $(BOOT_OBJ) $(KERNEL_OBJS) $(DRIVER_OBJS) $(FS_OBJS) $(SHELL_OBJS) $(LIB_OBJS)
 
 # Targets
-.PHONY: all clean kernel iso
+.PHONY: all clean kernel iso run
 
 all: kernel
 
@@ -55,5 +55,20 @@ kernel: $(ALL_OBJS)
 	@mkdir -p $(BUILD_DIR)
 	$(LD) $(LDFLAGS) -o $(BUILD_DIR)/microos.bin $(ALL_OBJS)
 
+iso: kernel
+	@mkdir -p $(BUILD_DIR)/iso/boot/grub
+	cp $(BUILD_DIR)/microos.bin $(BUILD_DIR)/iso/boot/microos.bin
+	@echo 'set timeout=0' > $(BUILD_DIR)/iso/boot/grub/grub.cfg
+	@echo 'set default=0' >> $(BUILD_DIR)/iso/boot/grub/grub.cfg
+	@echo '' >> $(BUILD_DIR)/iso/boot/grub/grub.cfg
+	@echo 'menuentry "MicroOS" {' >> $(BUILD_DIR)/iso/boot/grub/grub.cfg
+	@echo '  multiboot2 /boot/microos.bin' >> $(BUILD_DIR)/iso/boot/grub/grub.cfg
+	@echo '  boot' >> $(BUILD_DIR)/iso/boot/grub/grub.cfg
+	@echo '}' >> $(BUILD_DIR)/iso/boot/grub/grub.cfg
+	grub-mkrescue -o microos.iso $(BUILD_DIR)/iso
+
+run: iso
+	qemu-system-x86_64 -cdrom microos.iso -net nic,model=e1000 -net user
+
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) microos.iso

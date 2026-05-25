@@ -1,4 +1,11 @@
-# Multiboot2 header
+# Multiboot 1 header (for QEMU -kernel compatibility)
+.section .multiboot_v1
+.align 4
+.long 0x1BADB002
+.long 0x00000003
+.long -(0x1BADB002 + 0x00000003)
+
+# Multiboot 2 header
 .section .multiboot_header
 .align 8
 header_start:
@@ -21,17 +28,14 @@ start:
     cli
     mov $stack_top, %esp
 
-    # 1. Check for Long Mode (stubs for brevity)
-    # 2. Set up Paging
+    # 1. Set up Paging
     call setup_paging
     call enable_paging
 
-    # 3. Load 64-bit GDT
+    # 2. Load 64-bit GDT
     lgdt gdt64_ptr
 
-    # 4. Jump to Long Mode
-    # ljmp is not allowed in 64-bit mode by GAS if not careful.
-    # We use a push/retf trick for 64-bit transition.
+    # 3. Jump to Long Mode
     push $0x08
     push $long_mode_start
     lret
@@ -77,8 +81,11 @@ long_mode_start:
     mov %ax, %gs
 
     # Call kernel_main
-    mov %rbx, %rsi # Multiboot info
-    mov %rax, %rdi # Magic
+    # Multiboot 1: Magic is in EAX, Info in EBX
+    # Multiboot 2: Magic is in EAX, Info in EBX
+    # Note: We use 64-bit registers to pass arguments to kernel_main (System V AMD64 ABI)
+    mov %rbx, %rsi # Info structure
+    mov %rax, %rdi # Magic number
     call kernel_main
 
 .Lhalt:
